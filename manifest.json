@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "任意视频画中画 (Universal PiP)",
+  "version": "1.0.0",
+  "description": "给任意 <video> 添加浮动画中画按钮：优先调用系统级 Picture-in-Picture；被网站拦截时用 captureStream 在页内开小窗兜底。",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["style.css"],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+  "action": {
+    "default_title": "任意视频画中画"
+  }
+}

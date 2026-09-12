@@ -1,0 +1,80 @@
+/* 悬浮画中画按钮：钉在视频右上角 */
+.uni-pip-btn {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55) !important;
+  cursor: pointer !important;
+  padding: 0;
+  margin: 0;
+  display: block;
+  box-sizing: border-box;
+  opacity: 0.9;
+  transition: background 0.15s ease, opacity 0.15s ease;
+  -webkit-app-region: no-drag;
+}
+.uni-pip-btn:hover {
+  background: rgba(80, 120, 255, 0.85) !important;
+  opacity: 1;
+}
+.uni-pip-btn svg {
+  width: 60%;
+  height: 60%;
+  margin: 20% auto;
+  display: block;
+  fill: #fff;
+  pointer-events: none;
+}
+
+/* 页内兜底小窗 */
+.uni-pip-widget {
+  position: fixed !important;
+  right: 16px;
+  bottom: 16px;
+  width: 360px;
+  max-width: 40vw;
+  z-index: 2147483646 !important;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  font-family: system-ui, sans-serif;
+}
+.uni-pip-widget video {
+  display: block;
+  width: 100%;
+  background: #000;
+}
+.uni-pip-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #111;
+  color: #eee;
+  padding: 6px 10px;
+  font-size: 12px;
+  user-select: none;
+  cursor: move;
+}
+.uni-pip-bar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.uni-pip-close,
+.uni-pip-min {
+  border: none;
+  background: transparent;
+  color: #ccc;
+  font-size: 14px;
+  cursor: pointer;
+  margin-left: 8px;
+  line-height: 1;
+}
+.uni-pip-close:hover { color: #fff; }
