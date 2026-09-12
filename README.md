@@ -17,27 +17,14 @@
 | `manifest.json` | Manifest V3 清单，声明 content script 覆盖全部站点 |
 | `content.js` | 核心逻辑：注入按钮、系统级 PiP + 页内小窗兜底、自动隐藏 |
 | `style.css` | 按钮与小窗的样式 |
-| `dist/` | 构建产物：`universal-pip.crx`（拖拽安装）、`universal-pip-source.zip`（加载已解压） |
 
-## 安装（二选一）
+## 安装
 
-**方法 A · 拖拽 .crx 安装（推荐）**
-1. 从仓库 `dist/` 目录下载 `universal-pip.crx`；
+1. 从release下载 `universal-pip.zip`；
 2. 打开扩展页：`chrome://extensions`（Helium 为 `helium://extensions`）；
 3. 开启右上角 **「开发者模式」**；
-4. 把 `universal-pip.crx` **直接拖进页面**，松开即可安装；出现外部扩展警告时点「保留」。
+4. 把 `universal-pip.zip` **直接拖进页面**，松开即可安装；出现外部扩展警告时点「保留」。
 
-**方法 B · 加载已解压源码**
-1. 下载并解压 `dist/universal-pip-source.zip`，得到一个文件夹；
-2. 扩展页开启开发者模式后点 **「加载已解压的扩展程序」**，选择该文件夹。
-
-> 安装后：打开任意含视频的网页，鼠标移到视频顶部，点居中的 ⚪ 按钮即可进入小窗。
-
-
-
-
-
-> 更新方法：替换源码文件后，在扩展页点该扩展的 **刷新（↻）** 按钮即可生效。
 
 ## 使用
 
