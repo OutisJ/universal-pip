@@ -51,10 +51,15 @@
     };
     video.addEventListener("mousemove", show, { passive: true });
     video.addEventListener("touchstart", show, { passive: true });
-    video.addEventListener("mouseleave", () => {
+    video.addEventListener("mouseleave", (e) => {
+      // 鼠标移到按钮上时不算离开视频，避免闪烁
+      if (e.relatedTarget === btn) return;
       btn._forceHide = true;
       apply();
     });
+    // 光标在按钮上停住时也刷新空闲计时，保证能点中
+    btn.addEventListener("mousemove", show, { passive: true });
+    btn.addEventListener("touchstart", show, { passive: true });
     buttons.add(btn);
   }
 
