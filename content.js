@@ -38,7 +38,7 @@
     btn._hideTimer = null;
 
     const apply = () => {
-      btn.style.display = btn._forceHide ? "none" : "block";
+      btn.classList.toggle("uni-pip-hide", !!btn._forceHide);
     };
     const show = () => {
       btn._forceHide = false;
@@ -91,7 +91,7 @@
         clearTimeout(b._hideTimer);
         b._forceHide = true;
       }
-      b.style.display = full ? "none" : (b._forceHide ? "none" : "block");
+      // 取消全屏强制隐藏：跟随鼠标显示、空闲淡出
     }
   });
   document.addEventListener("webkitfullscreenchange", () => {
@@ -102,7 +102,7 @@
       if (fs === v || fs.contains(v)) {
         clearTimeout(b._hideTimer);
         b._forceHide = true;
-        b.style.display = "none";
+        // 取消全屏强制隐藏
       }
     }
   });

@@ -13,8 +13,13 @@
   display: block;
   box-sizing: border-box;
   opacity: 0.9;
-  transition: background 0.15s ease, opacity 0.15s ease;
+  transition: background 0.15s ease, opacity 0.4s ease;
   -webkit-app-region: no-drag;
+}
+/* 隐藏态：用透明度平滑淡出，pointer-events 让隐藏时不挡视频操控 */
+.uni-pip-btn.uni-pip-hide {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 .uni-pip-btn:hover {
   background: rgba(80, 120, 255, 0.85) !important;
