@@ -12,16 +12,64 @@
   const CLOSE_X = "✕";
   const MIN_X = "—";
 
-  // ---------------- 追踪所有按钮并同步位置 ----------------
-  const buttons = new Set();
+  // Track videos, buttons and the pointer independently of the site's overlays.
+  const records = new Set();
+  const knownVideos = new WeakMap();
+  let pointer = null;
+
+  function rectContains(rect, x, y) {
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+  }
+
+  function isFullscreen(video) {
+    const fs = document.fullscreenElement || document.webkitFullscreenElement;
+    return !!fs && (fs === video || fs.contains(video));
+  }
+
+  function isVisible(rect) {
+    return rect.width >= 80 && rect.height >= 50 && rect.bottom > 0 &&
+           rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth;
+  }
+
+  // Hover previews tend to be muted and stop as soon as the pointer leaves.
+  // Wait for an intentional interaction or playback that persists off-hover.
+  function isPlayer(record, rect) {
+    const video = record.video;
+    return video.controls || record.engaged || record.persistent ||
+           (!video.muted && rect.width >= 640 && rect.height >= 360) ||
+           (!video.muted && !video.paused && rect.width >= 320 && rect.height >= 180);
+  }
+
+  function hide(record) {
+    clearTimeout(record.hideTimer);
+    record.button.classList.add("uni-pip-hide");
+  }
+
+  function show(record) {
+    record.button.classList.remove("uni-pip-hide");
+    clearTimeout(record.hideTimer);
+    record.hideTimer = setTimeout(() => hide(record), 2600);
+  }
+
+  function checkPersistentPlayback(record) {
+    clearTimeout(record.playTimer);
+    if (record.video.paused || record.persistent) return;
+    record.playTimer = setTimeout(() => {
+      const video = record.video;
+      if (!video.isConnected || video.paused) return;
+      const rect = video.getBoundingClientRect();
+      if (!pointer || !rectContains(rect, pointer.x, pointer.y)) {
+        record.persistent = true;
+      }
+    }, 400);
+  }
 
   function makeButton(video) {
-    if (video.dataset.uniPip) return;
-    video.dataset.uniPip = "1";
+    if (knownVideos.has(video) || video.closest(".uni-pip-widget")) return;
 
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "uni-pip-btn";
+    btn.className = "uni-pip-btn uni-pip-hide";
     btn.innerHTML = ICON_SVG;
     btn.title = "画中画";
     btn.setAttribute("aria-label", "画中画");
@@ -32,46 +80,34 @@
       togglePip(video);
     });
     btn.addEventListener("mouseover", (e) => e.stopPropagation());
+    const record = {
+      video, button: btn, engaged: false, persistent: false,
+      hovered: false, hideTimer: null, playTimer: null, abort: new AbortController()
+    };
+    knownVideos.set(video, record);
+    records.add(record);
+    video.addEventListener("play", () => checkPersistentPlayback(record), { signal: record.abort.signal });
+    video.addEventListener("pause", () => clearTimeout(record.playTimer), { signal: record.abort.signal });
     document.documentElement.appendChild(btn);
-    btn._video = video;
-    btn._forceHide = true; // 初始隐藏，等待鼠标进入后显示
-    btn._hideTimer = null;
-
-    const apply = () => {
-      btn.classList.toggle("uni-pip-hide", !!btn._forceHide);
-    };
-    const show = () => {
-      btn._forceHide = false;
-      apply();
-      clearTimeout(btn._hideTimer);
-      btn._hideTimer = setTimeout(() => {
-        btn._forceHide = true;
-        apply();
-      }, 2600);
-    };
-    video.addEventListener("mousemove", show, { passive: true });
-    video.addEventListener("touchstart", show, { passive: true });
-    video.addEventListener("mouseleave", (e) => {
-      // 鼠标移到按钮上时不算离开视频，避免闪烁
-      if (e.relatedTarget === btn) return;
-      btn._forceHide = true;
-      apply();
-    });
-    // 光标在按钮上停住时也刷新空闲计时，保证能点中
-    btn.addEventListener("mousemove", show, { passive: true });
-    btn.addEventListener("touchstart", show, { passive: true });
-    buttons.add(btn);
+    if (!video.paused) checkPersistentPlayback(record);
   }
 
   function syncPositions() {
-    for (const btn of buttons) {
-      const v = btn._video;
-      const r = v.getBoundingClientRect();
-      // 移出视口 / 过小的视频直接隐藏
-      const offscreen = r.width < 80 || r.height < 50 || r.bottom < 0 || r.top > innerHeight ||
-                        r.right < 0 || r.left > innerWidth;
-      if (offscreen) { btn.style.display = "none"; continue; }
-      // 可见性统一由 apply()/_forceHide 控制，这里只更新位置
+    for (const record of records) {
+      const { video, button: btn } = record;
+      if (!video.isConnected) {
+        record.abort.abort();
+        clearTimeout(record.hideTimer);
+        clearTimeout(record.playTimer);
+        btn.remove();
+        records.delete(record);
+        knownVideos.delete(video);
+        continue;
+      }
+      const r = video.getBoundingClientRect();
+      const visible = isVisible(r) && !isFullscreen(video);
+      btn.style.display = visible ? "block" : "none";
+      if (!visible) { record.hovered = false; hide(record); continue; }
       btn.style.width = "30px";
       btn.style.height = "30px";
       btn.style.left = Math.round(r.left + (r.width - 30) / 2) + "px";
@@ -81,31 +117,31 @@
   }
   requestAnimationFrame(syncPositions);
 
-  // 视频全屏时强制隐藏按钮
-  document.addEventListener("fullscreenchange", () => {
-    const fs = document.fullscreenElement || document.webkitFullscreenElement;
-    for (const b of buttons) {
-      const v = b._video;
-      const full = fs && (fs === v || fs.contains(v));
-      if (full) {
-        clearTimeout(b._hideTimer);
-        b._forceHide = true;
-      }
-      // 取消全屏强制隐藏：跟随鼠标显示、空闲淡出
+  // Capture pointer events above the video even when a player overlay covers it.
+  document.addEventListener("pointermove", (event) => {
+    if (event.pointerType === "touch") return;
+    pointer = { x: event.clientX, y: event.clientY };
+    for (const record of records) {
+      const rect = record.video.getBoundingClientRect();
+      const hovered = isVisible(rect) && !isFullscreen(record.video) &&
+                      rectContains(rect, pointer.x, pointer.y);
+      if (hovered && isPlayer(record, rect)) show(record);
+      else if (record.hovered) hide(record);
+      if (record.hovered && !hovered) checkPersistentPlayback(record);
+      record.hovered = hovered;
     }
-  });
-  document.addEventListener("webkitfullscreenchange", () => {
-    const fs = document.webkitFullscreenElement;
-    if (!fs) return;
-    for (const b of buttons) {
-      const v = b._video;
-      if (fs === v || fs.contains(v)) {
-        clearTimeout(b._hideTimer);
-        b._forceHide = true;
-        // 取消全屏强制隐藏
-      }
+  }, true);
+  document.addEventListener("pointerdown", (event) => {
+    for (const record of records) {
+      const rect = record.video.getBoundingClientRect();
+      if (!isVisible(rect) || !rectContains(rect, event.clientX, event.clientY)) continue;
+      // A click on a muted, control-free card is usually navigation, not player use.
+      if (!record.video.controls && record.video.muted &&
+          (rect.width < 640 || rect.height < 360)) continue;
+      record.engaged = true;
+      if (!isFullscreen(record.video)) show(record);
     }
-  });
+  }, true);
 
   // ---------------- 主体逻辑 ----------------
   async function togglePip(video) {
